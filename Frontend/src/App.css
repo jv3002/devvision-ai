@@ -1,0 +1,43 @@
+import { useEffect, useState } from "react";
+import { Line } from "react-chartjs-2";
+import Chart from "chart.js/auto";
+
+function App() {
+
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+
+    fetch("http://localhost:3000/api/projects/PROJECT_ID/metrics-history")
+      .then(res => res.json())
+      .then(data => setData(data));
+
+  }, []);
+
+  const labels = data.map(run => new Date(run.createdAt).toLocaleDateString());
+
+  const linesOfCode = data.map(run => {
+    const metric = run.metrics.find(m => m.name === "lines_of_code");
+    return metric ? metric.value : 0;
+  });
+
+  const chartData = {
+    labels,
+    datasets: [
+      {
+        label: "Lines of Code",
+        data: linesOfCode
+      }
+    ]
+  };
+
+  return (
+    <div style={{width:"800px",margin:"50px auto"}}>
+      <h1>Project Metrics</h1>
+      <Line data={chartData} />
+    </div>
+  );
+
+}
+
+export default App;
