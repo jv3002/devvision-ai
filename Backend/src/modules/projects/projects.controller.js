@@ -1,8 +1,29 @@
+import path from "path";
+
 import prisma from "../../config/prisma.js";
 import analysisEngine from "../analysis/analysis.engine.js";
 import { cloneRepository } from "../analysis/git.service.js";
 import { generateRefactorSuggestions } from "../intelligence/refactorEngine.service.js";
 import { generateAISuggestion } from "../intelligence/ai.service.js";
+
+const formatFilePath = (filePath, projectRepoPath = "") => {
+  if (!filePath || typeof filePath !== "string") {
+    return "";
+  }
+
+  if (projectRepoPath && filePath.startsWith(projectRepoPath)) {
+    return path.relative(projectRepoPath, filePath).replace(/\\/g, "/");
+  }
+
+  return filePath.replace(/\\/g, "/");
+};
+
+const normalizeHotspots = (hotspots = [], projectRepoPath = "") => {
+  return hotspots.map((hotspot) => ({
+    ...hotspot,
+    file: formatFilePath(hotspot.file, projectRepoPath),
+  }));
+};
 
 /* =========================
    CREATE PROJECT
@@ -24,8 +45,8 @@ export const createProject = async (req, res) => {
         name,
         description,
         repoUrl,
-        repoPath: ""
-      }
+        repoPath: "",
+      },
     });
 
     let repoPath = "";
@@ -38,7 +59,7 @@ export const createProject = async (req, res) => {
 
         await prisma.project.update({
           where: { id: project.id },
-          data: { repoPath }
+          data: { repoPath },
         });
 
         cloneStatus = "CLONED";
@@ -57,7 +78,7 @@ export const createProject = async (req, res) => {
       projectId: project.id,
       cloneStatus,
       cloneMessage,
-      repoPath
+      repoPath,
     });
 
   } catch (error) {
@@ -65,7 +86,7 @@ export const createProject = async (req, res) => {
 
     return res.status(500).json({
       message: "Error creating project",
-      detail: error.message
+      detail: error.message,
     });
   }
 };
@@ -77,8 +98,8 @@ export const getProjects = async (req, res) => {
   try {
     const projects = await prisma.project.findMany({
       orderBy: {
-        createdAt: "desc"
-      }
+        createdAt: "desc",
+      },
     });
 
     return res.json(projects || []);
@@ -88,7 +109,7 @@ export const getProjects = async (req, res) => {
 
     return res.status(500).json({
       message: "Error getting projects",
-      detail: error.message
+      detail: error.message,
     });
   }
 };
@@ -101,7 +122,7 @@ export const getProjectById = async (req, res) => {
     const { id } = req.params;
 
     const project = await prisma.project.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!project) {
@@ -115,7 +136,7 @@ export const getProjectById = async (req, res) => {
 
     return res.status(500).json({
       message: "Error getting project",
-      detail: error.message
+      detail: error.message,
     });
   }
 };
@@ -128,7 +149,7 @@ export const analyzeProjectController = async (req, res) => {
     const { id } = req.params;
 
     const project = await prisma.project.findUnique({
-      where: { id }
+      where: { id },
     });
 
     if (!project) {
@@ -137,20 +158,27 @@ export const analyzeProjectController = async (req, res) => {
 
     const result = await analysisEngine.analyzeProject({
       projectId: id,
-      projectPath: project.repoPath
+      projectPath: project.repoPath,
     });
+
+    const cleanHotspots = normalizeHotspots(result.hotspots || [], project.repoPath);
+
+    const cleanResult = {
+      ...result,
+      hotspots: cleanHotspots,
+    };
 
     const analysisRun = await prisma.analysisRun.create({
       data: {
         projectId: id,
-        result
-      }
+        result: cleanResult,
+      },
     });
 
     return res.json({
       message: "Analysis completed",
       analysisId: analysisRun.id,
-      result
+      result: cleanResult,
     });
 
   } catch (error) {
@@ -158,7 +186,7 @@ export const analyzeProjectController = async (req, res) => {
 
     return res.status(500).json({
       message: "Error analyzing project",
-      detail: error.message
+      detail: error.message,
     });
   }
 };
@@ -172,7 +200,7 @@ export const getProjectMetricsHistory = async (req, res) => {
 
     const runs = await prisma.analysisRun.findMany({
       where: { projectId: id },
-      orderBy: { createdAt: "asc" }
+      orderBy: { createdAt: "asc" },
     });
 
     return res.json(runs);
@@ -182,7 +210,7 @@ export const getProjectMetricsHistory = async (req, res) => {
 
     return res.status(500).json({
       message: "Error getting metrics history",
-      detail: error.message
+      detail: error.message,
     });
   }
 };
@@ -194,9 +222,13 @@ export const getProjectActions = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const project = await prisma.project.findUnique({
+      where: { id },
+    });
+
     const latestRun = await prisma.analysisRun.findFirst({
       where: { projectId: id },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
     });
 
     if (!latestRun || !latestRun.result) {
@@ -204,23 +236,27 @@ export const getProjectActions = async (req, res) => {
         projectId: id,
         actions: ["Run analysis first"],
         refactors: [],
-        aiSuggestions: []
+        aiSuggestions: [],
       });
     }
 
-    const { hotspots = [] } = latestRun.result;
+    const projectRepoPath = project?.repoPath || "";
+    const hotspots = normalizeHotspots(
+      latestRun.result.hotspots || [],
+      projectRepoPath
+    );
 
-    const actions = hotspots.map(h => ({
+    const actions = hotspots.map((h) => ({
       priority: "HIGH",
       message: `Refactor ${h.file}`,
-      impact: `High complexity (${h.lines} lines, ${h.functions} functions)`
+      impact: `High complexity (${h.lines} lines, ${h.functions} functions)`,
     }));
 
     if (actions.length === 0) {
       actions.push({
         priority: "LOW",
         message: "Project is in good shape or no analyzable files were found",
-        impact: "Maintain current practices"
+        impact: "Maintain current practices",
       });
     }
 
@@ -233,13 +269,13 @@ export const getProjectActions = async (req, res) => {
 
           return {
             file: h.file,
-            suggestion
+            suggestion,
           };
 
         } catch (err) {
           return {
             file: h.file,
-            suggestion: "AI suggestion not available"
+            suggestion: "AI suggestion not available",
           };
         }
       })
@@ -249,7 +285,7 @@ export const getProjectActions = async (req, res) => {
       projectId: id,
       actions,
       refactors,
-      aiSuggestions
+      aiSuggestions,
     });
 
   } catch (error) {
@@ -257,7 +293,7 @@ export const getProjectActions = async (req, res) => {
 
     return res.status(500).json({
       message: "Error getting project actions",
-      detail: error.message
+      detail: error.message,
     });
   }
 };
