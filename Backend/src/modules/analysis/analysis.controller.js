@@ -1,32 +1,55 @@
+import prisma from "../../config/prisma.js";
 import { runProjectAnalysis } from "./analysis.service.js";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
 
 /* =========================
    ANALYZE PROJECT CONTROLLER
 ========================= */
 export const analyzeProject = async (req, res) => {
   try {
-    const projectId = req.params.projectId;
-    const organizationId = req.user.organizationId;
+    const { projectId } = req.params;
 
-    if (!organizationId) {
-      return res.status(403).json({
-        message: "User does not belong to any organization",
+    if (!projectId) {
+      return res.status(400).json({
+        message: "Project ID is required",
       });
     }
+
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      return res.status(404).json({
+        message: "Project not found",
+      });
+    }
+
+    const organizationId = req.user?.organizationId || null;
 
     const analysisResult = await runProjectAnalysis(
       projectId,
       organizationId
     );
 
-    return res.status(200).json(analysisResult);
+    return res.status(200).json({
+      message: "Analysis completed",
+      projectId,
+      analysis: analysisResult,
+    });
+
   } catch (error) {
-    return res.status(400).json({ message: error.message });
+    console.error("ANALYSIS CONTROLLER ERROR:", error);
+
+    return res.status(500).json({
+      message: "Error running project analysis",
+      detail: error.message,
+    });
   }
 };
+
+/* =========================
+   GET PROJECT RUNS
+========================= */
 export const getProjectRuns = async (req, res) => {
   try {
     const { id } = req.params;
@@ -34,15 +57,21 @@ export const getProjectRuns = async (req, res) => {
     const runs = await prisma.analysisRun.findMany({
       where: { projectId: id },
       include: { metrics: true },
-      orderBy: { createdAt: "asc" }
+      orderBy: { createdAt: "asc" },
     });
 
-    res.json({
+    return res.json({
+      projectId: id,
       totalRuns: runs.length,
-      runs
+      runs,
     });
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("GET PROJECT RUNS ERROR:", error);
+
+    return res.status(500).json({
+      message: "Error getting project runs",
+      detail: error.message,
+    });
   }
 };
