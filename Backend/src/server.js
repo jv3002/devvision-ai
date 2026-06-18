@@ -17,31 +17,53 @@ import errorHandler from "./middlewares/error.middleware.js";
 
 dotenv.config();
 
+/*
+====================================================
+VALIDACIÓN DE VARIABLES DE ENTORNO
+====================================================
+*/
+
+const requiredEnvVars = [
+  "DATABASE_URL",
+  "JWT_SECRET"
+];
+
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    console.error(`❌ Missing environment variable: ${envVar}`);
+    process.exit(1);
+  }
+}
+
 const app = express();
 
-/* HTTP SERVER */
 const server = http.createServer(app);
 
-/* SOCKET.IO */
 const io = new Server(server, {
   cors: {
     origin: "*"
   }
 });
 
-/* EXPORTAR SOCKET */
 export { io };
 
-/* MIDDLEWARES */
+/*
+====================================================
+MIDDLEWARES
+====================================================
+*/
+
 app.use(cors());
 app.use(express.json());
 
-/* =====================================================
-   HEALTH CHECKS
-===================================================== */
+/*
+====================================================
+HEALTH CHECKS
+====================================================
+*/
 
 app.get("/", (req, res) => {
-  res.status(200).json({
+  res.json({
     app: "DevVision AI",
     status: "online",
     version: "1.0.0",
@@ -64,15 +86,19 @@ app.get("/api/status", (req, res) => {
   });
 });
 
-/* =====================================================
-   WEBHOOKS
-===================================================== */
+/*
+====================================================
+WEBHOOKS
+====================================================
+*/
 
 app.use("/api/webhooks", githubWebhookRoutes);
 
-/* =====================================================
-   API ROUTES
-===================================================== */
+/*
+====================================================
+API ROUTES
+====================================================
+*/
 
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
@@ -83,32 +109,38 @@ app.use("/api/analysis", analysisRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
-/* =====================================================
-   SOCKET CONNECTION
-===================================================== */
+/*
+====================================================
+SOCKET.IO
+====================================================
+*/
 
 io.on("connection", (socket) => {
-  console.log("⚡ Cliente conectado:", socket.id);
+  console.log(`⚡ Client connected: ${socket.id}`);
 
   socket.on("join_project", (projectId) => {
     socket.join(projectId);
-    console.log(`📡 Cliente unido al proyecto ${projectId}`);
+    console.log(`📡 Joined project: ${projectId}`);
   });
 
   socket.on("disconnect", () => {
-    console.log("❌ Cliente desconectado");
+    console.log("❌ Client disconnected");
   });
 });
 
-/* =====================================================
-   ERROR HANDLER
-===================================================== */
+/*
+====================================================
+ERROR HANDLER
+====================================================
+*/
 
 app.use(errorHandler);
 
-/* =====================================================
-   START SERVER
-===================================================== */
+/*
+====================================================
+START SERVER
+====================================================
+*/
 
 const PORT = process.env.PORT || 3000;
 
