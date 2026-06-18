@@ -1,4 +1,3 @@
-import { calculateProjectScore } from "./projectScore.service.js";
 import { generateAlerts } from "./alert.service.js";
 import prisma from "../../config/prisma.js";
 import { getDeveloperRanking } from "./developerInsights.service.js";
@@ -6,12 +5,13 @@ import { detectProjectRisk } from "./riskAnalysis.service.js";
 import { predictProjectFuture } from "./prediction.service.js";
 import { generateRecommendations } from "./recommendation.service.js";
 
-// 📊 Obtener dashboard de proyecto
+/* =========================
+   PROJECT DASHBOARD
+========================= */
 export const getProjectDashboard = async (req, res) => {
   try {
     const { projectId } = req.params;
 
-    // 🔍 buscar proyecto
     const project = await prisma.project.findUnique({
       where: { id: projectId }
     });
@@ -22,35 +22,44 @@ export const getProjectDashboard = async (req, res) => {
       });
     }
 
-    // 📊 score
-    const score = await calculateProjectScore(prisma, projectId);
+    const latestAnalysis = await prisma.analysisRun.findFirst({
+      where: { projectId },
+      orderBy: { createdAt: "desc" }
+    });
 
-    // 📈 historial de score
-    const history = await prisma.projectScoreHistory.findMany({
+    const analysisResult = latestAnalysis?.result || null;
+
+    const score = analysisResult?.overallScore ?? 0;
+    const dimensions = analysisResult?.dimensions ?? [];
+    const hotspots = analysisResult?.hotspots ?? [];
+    const analysisStatus = analysisResult?.analysisStatus ?? "NO_ANALYSIS";
+    const analysisMessage =
+      analysisResult?.message || "No analysis has been executed yet.";
+
+    const historyRuns = await prisma.analysisRun.findMany({
       where: { projectId },
       orderBy: { createdAt: "asc" }
     });
 
-    // 🧠 riesgo
-    const risk = await detectProjectRisk(prisma, projectId);
+    const history = historyRuns.map((run) => ({
+      id: run.id,
+      createdAt: run.createdAt,
+      score: run.result?.overallScore ?? 0,
+      status: run.result?.analysisStatus ?? "UNKNOWN"
+    }));
 
-    // 🧑‍💻 desarrolladores
+    const risk = await detectProjectRisk(prisma, projectId);
     const developers = await getDeveloperRanking(prisma, projectId);
 
-    // 📦 commits recientes
     const commits = await prisma.commit.findMany({
       where: { projectId },
       orderBy: { date: "desc" },
       take: 10
     });
 
-    // 🚨 alertas
     const alerts = generateAlerts(score, risk);
-
-    // 🔮 predicción
     const prediction = predictProjectFuture(history);
 
-    // 💡 recomendaciones
     const recommendations = generateRecommendations({
       score,
       risk,
@@ -60,14 +69,28 @@ export const getProjectDashboard = async (req, res) => {
     return res.json({
       project: {
         id: project.id,
-        name: project.name
+        name: project.name,
+        description: project.description,
+        repoUrl: project.repoUrl,
+        repoPath: project.repoPath,
+        createdAt: project.createdAt
       },
+      latestAnalysis: latestAnalysis
+        ? {
+            id: latestAnalysis.id,
+            createdAt: latestAnalysis.createdAt,
+            status: analysisStatus,
+            message: analysisMessage
+          }
+        : null,
       score,
+      dimensions,
+      hotspots,
       risk,
       developers,
       alerts,
-      prediction,       
-      recommendations,   
+      prediction,
+      recommendations,
       commits,
       history
     });
