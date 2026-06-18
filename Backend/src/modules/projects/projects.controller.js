@@ -1,3 +1,4 @@
+import fs from "fs";
 import path from "path";
 
 import prisma from "../../config/prisma.js";
@@ -5,6 +6,10 @@ import analysisEngine from "../analysis/analysis.engine.js";
 import { cloneRepository } from "../analysis/git.service.js";
 import { generateRefactorSuggestions } from "../intelligence/refactorEngine.service.js";
 import { generateAISuggestion } from "../intelligence/ai.service.js";
+
+const repositoryPathExists = (repoPath) => {
+  return repoPath && typeof repoPath === "string" && fs.existsSync(repoPath);
+};
 
 const formatFilePath = (filePath, projectRepoPath = "") => {
   if (!filePath || typeof filePath !== "string") {
@@ -23,6 +28,51 @@ const normalizeHotspots = (hotspots = [], projectRepoPath = "") => {
     ...hotspot,
     file: formatFilePath(hotspot.file, projectRepoPath),
   }));
+};
+
+const ensureRepositoryAvailable = async (project) => {
+  let projectPath = project.repoPath || "";
+  let cloneStatus = "SKIPPED";
+  let cloneMessage = "Repository path is already available.";
+
+  if (repositoryPathExists(projectPath)) {
+    return {
+      projectPath,
+      cloneStatus,
+      cloneMessage,
+    };
+  }
+
+  if (process.env.ENABLE_GIT_CLONE !== "true") {
+    return {
+      projectPath: "",
+      cloneStatus: "DISABLED",
+      cloneMessage: "Repository cloning is disabled in this environment.",
+    };
+  }
+
+  if (!project.repoUrl) {
+    return {
+      projectPath: "",
+      cloneStatus: "MISSING_REPO_URL",
+      cloneMessage: "Repository URL is missing.",
+    };
+  }
+
+  console.log("📦 Repository path not available. Cloning from repoUrl...");
+
+  projectPath = await cloneRepository(project.repoUrl, project.id);
+
+  await prisma.project.update({
+    where: { id: project.id },
+    data: { repoPath: projectPath },
+  });
+
+  return {
+    projectPath,
+    cloneStatus: "CLONED",
+    cloneMessage: "Repository cloned successfully.",
+  };
 };
 
 /* =========================
@@ -156,16 +206,37 @@ export const analyzeProjectController = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
+    let repositoryInfo;
+
+    try {
+      repositoryInfo = await ensureRepositoryAvailable(project);
+    } catch (err) {
+      console.error("⚠️ Repository preparation failed:", err.message);
+
+      repositoryInfo = {
+        projectPath: "",
+        cloneStatus: "FAILED",
+        cloneMessage: "Repository preparation failed.",
+      };
+    }
+
     const result = await analysisEngine.analyzeProject({
       projectId: id,
-      projectPath: project.repoPath,
+      projectPath: repositoryInfo.projectPath,
     });
 
-    const cleanHotspots = normalizeHotspots(result.hotspots || [], project.repoPath);
+    const cleanHotspots = normalizeHotspots(
+      result.hotspots || [],
+      repositoryInfo.projectPath
+    );
 
     const cleanResult = {
       ...result,
       hotspots: cleanHotspots,
+      repository: {
+        cloneStatus: repositoryInfo.cloneStatus,
+        cloneMessage: repositoryInfo.cloneMessage,
+      },
     };
 
     const analysisRun = await prisma.analysisRun.create({
