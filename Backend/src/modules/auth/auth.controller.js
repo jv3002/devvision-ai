@@ -1,8 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-
-const prisma = new PrismaClient();
+import prisma from "../../config/prisma.js";
 
 /* =========================
    REGISTER
@@ -10,6 +8,12 @@ const prisma = new PrismaClient();
 export const register = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email and password are required",
+      });
+    }
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -28,16 +32,27 @@ export const register = async (req, res) => {
         email,
         password: hashedPassword,
       },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        plan: true,
+        organizationId: true,
+        createdAt: true,
+      },
     });
 
-    res.json({
+    return res.status(201).json({
       message: "User created",
       user,
     });
 
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
+    console.error("REGISTER ERROR:", error);
+
+    return res.status(500).json({
+      message: "Error creating user",
+      detail: error.message,
     });
   }
 };
@@ -48,6 +63,12 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email and password are required",
+      });
+    }
 
     const user = await prisma.user.findUnique({
       where: { email },
@@ -76,14 +97,25 @@ export const login = async (req, res) => {
       { expiresIn: "1d" }
     );
 
-    res.json({
+    return res.json({
       message: "Login successful",
       token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        plan: user.plan,
+        organizationId: user.organizationId,
+        createdAt: user.createdAt,
+      },
     });
 
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
+    console.error("LOGIN ERROR:", error);
+
+    return res.status(500).json({
+      message: "Error logging in",
+      detail: error.message,
     });
   }
 };
