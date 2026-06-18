@@ -17,15 +17,10 @@ class AnalysisEngine {
       data: jsAdapter.parseFile(file)
     }));
 
-    /* =============================
-       MÉTRICAS POR ARCHIVO
-    ============================== */
-
     const fileMetrics = parsedFiles.map(f => {
       const lines = f.data.lines;
       const functions = f.data.functions.length;
       const imports = f.data.imports.length;
-
       const complexity = functions / (lines || 1);
 
       return {
@@ -37,18 +32,10 @@ class AnalysisEngine {
       };
     });
 
-    /* =============================
-       🔥 NUEVO: HOTSPOTS
-    ============================== */
-
     const hotspots = fileMetrics
       .filter(f => f.lines > 300 || f.complexity > 0.05)
       .sort((a, b) => (b.lines + b.functions) - (a.lines + a.functions))
       .slice(0, 5);
-
-    /* =============================
-       DIMENSIÓN 1: CALIDAD ESTRUCTURAL
-    ============================== */
 
     const structural = new AuditDimension({
       key: "structural_quality",
@@ -99,10 +86,6 @@ class AnalysisEngine {
     structural.calculateScore();
     audit.addDimension(structural);
 
-    /* =============================
-       DIMENSIÓN 2: ARQUITECTURA
-    ============================== */
-
     const architecture = new AuditDimension({
       key: "architecture",
       name: "Arquitectura",
@@ -114,8 +97,7 @@ class AnalysisEngine {
       0
     );
 
-    const avgCoupling =
-      files.length === 0 ? 0 : totalImports / files.length;
+    const avgCoupling = files.length === 0 ? 0 : totalImports / files.length;
 
     architecture.addMetric(
       new MetricResult({
@@ -142,25 +124,22 @@ class AnalysisEngine {
     architecture.calculateScore();
     audit.addDimension(architecture);
 
-    /* =============================
-       SCORE FINAL
-    ============================== */
-
     audit.calculateOverallScore();
 
     const result = audit.toJSON();
 
-    // 🔥 AGREGAMOS HOTSPOTS AL RESULTADO
     result.hotspots = hotspots;
+    result.analysisStatus = files.length === 0 ? "NO_FILES_ANALYZED" : "COMPLETED";
+    result.message =
+      files.length === 0
+        ? "No se encontraron archivos JavaScript para analizar o el repositorio no está disponible."
+        : "Análisis completado correctamente.";
 
     return result;
   }
 
-  /* =============================
-     NORMALIZADORES
-  ============================== */
-
   normalizeTotalFiles(files) {
+    if (files === 0) return 0;
     if (files < 5) return 0.6;
     if (files < 20) return 0.8;
     if (files < 100) return 1;
@@ -168,6 +147,7 @@ class AnalysisEngine {
   }
 
   normalizeTotalLines(lines) {
+    if (lines === 0) return 0;
     if (lines < 200) return 0.7;
     if (lines < 2000) return 1;
     if (lines < 10000) return 0.9;
@@ -175,6 +155,7 @@ class AnalysisEngine {
   }
 
   normalizeFunctionSize(avg) {
+    if (avg === 0) return 0;
     if (avg <= 20) return 1;
     if (avg <= 50) return 0.8;
     if (avg <= 100) return 0.5;
@@ -182,6 +163,7 @@ class AnalysisEngine {
   }
 
   normalizeCoupling(avg) {
+    if (avg === 0) return 0;
     if (avg <= 3) return 1;
     if (avg <= 7) return 0.7;
     if (avg <= 15) return 0.4;
@@ -189,26 +171,54 @@ class AnalysisEngine {
   }
 
   normalizeImportDensity(total) {
+    if (total === 0) return 0;
     if (total <= 20) return 1;
     if (total <= 50) return 0.8;
     if (total <= 100) return 0.5;
     return 0.3;
   }
 
-  /* =============================
-     UTILIDADES
-  ============================== */
-
   scanFiles(dir) {
+    if (!dir || typeof dir !== "string") {
+      console.warn("⚠️ No projectPath provided for analysis.");
+      return [];
+    }
+
+    const absolutePath = path.resolve(dir);
+
+    if (!fs.existsSync(absolutePath)) {
+      console.warn("⚠️ Project path does not exist:", absolutePath);
+      return [];
+    }
+
+    const stat = fs.statSync(absolutePath);
+
+    if (!stat.isDirectory()) {
+      console.warn("⚠️ Project path is not a directory:", absolutePath);
+      return [];
+    }
+
     let results = [];
-    const list = fs.readdirSync(dir);
+
+    const list = fs.readdirSync(absolutePath);
 
     list.forEach(file => {
-      const filePath = path.join(dir, file);
-      const stat = fs.statSync(filePath);
+      const filePath = path.join(absolutePath, file);
+      const fileStat = fs.statSync(filePath);
 
-      if (stat.isDirectory()) {
-        results = results.concat(this.scanFiles(filePath));
+      if (fileStat.isDirectory()) {
+        const ignoredDirs = [
+          "node_modules",
+          ".git",
+          "dist",
+          "build",
+          ".next",
+          "coverage"
+        ];
+
+        if (!ignoredDirs.includes(file)) {
+          results = results.concat(this.scanFiles(filePath));
+        }
       } else if (file.endsWith(".js")) {
         results.push(filePath);
       }
