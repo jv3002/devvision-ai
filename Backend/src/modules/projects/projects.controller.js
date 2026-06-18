@@ -29,8 +29,9 @@ export const createProject = async (req, res) => {
     });
 
     let repoPath = "";
+    let cloneStatus = "DISABLED";
+    let cloneMessage = "Repository cloning is disabled in this environment.";
 
-    //🔥 CLONE OPCIONAL
     if (process.env.ENABLE_GIT_CLONE === "true") {
       try {
         repoPath = await cloneRepository(repoUrl, project.id);
@@ -40,19 +41,32 @@ export const createProject = async (req, res) => {
           data: { repoPath }
         });
 
+        cloneStatus = "CLONED";
+        cloneMessage = "Repository cloned successfully.";
+
       } catch (err) {
-        console.log("⚠️ Clone falló, continuando sin repo...");
+        console.error("⚠️ Repository clone failed:", err.message);
+
+        cloneStatus = "FAILED";
+        cloneMessage = "Project created, but repository cloning failed.";
       }
     }
 
-    res.status(201).json({
-      message: "Project created and repository cloned",
-      projectId: project.id
+    return res.status(201).json({
+      message: "Project created successfully",
+      projectId: project.id,
+      cloneStatus,
+      cloneMessage,
+      repoPath
     });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: error.message });
+    console.error("CREATE PROJECT ERROR:", error);
+
+    return res.status(500).json({
+      message: "Error creating project",
+      detail: error.message
+    });
   }
 };
 
@@ -61,20 +75,21 @@ export const createProject = async (req, res) => {
 ========================= */
 export const getProjects = async (req, res) => {
   try {
-
-    const projects = await prisma.project.findMany();
+    const projects = await prisma.project.findMany({
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
 
     return res.json(projects || []);
 
   } catch (error) {
-
     console.error("🔥 GET PROJECTS ERROR:", error);
 
     return res.status(500).json({
       message: "Error getting projects",
       detail: error.message
     });
-
   }
 };
 
@@ -93,10 +108,15 @@ export const getProjectById = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    res.json(project);
+    return res.json(project);
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("GET PROJECT BY ID ERROR:", error);
+
+    return res.status(500).json({
+      message: "Error getting project",
+      detail: error.message
+    });
   }
 };
 
@@ -127,15 +147,19 @@ export const analyzeProjectController = async (req, res) => {
       }
     });
 
-    res.json({
+    return res.json({
       message: "Analysis completed",
       analysisId: analysisRun.id,
       result
     });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: error.message });
+    console.error("ANALYZE PROJECT ERROR:", error);
+
+    return res.status(500).json({
+      message: "Error analyzing project",
+      detail: error.message
+    });
   }
 };
 
@@ -151,15 +175,20 @@ export const getProjectMetricsHistory = async (req, res) => {
       orderBy: { createdAt: "asc" }
     });
 
-    res.json(runs);
+    return res.json(runs);
 
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("METRICS HISTORY ERROR:", error);
+
+    return res.status(500).json({
+      message: "Error getting metrics history",
+      detail: error.message
+    });
   }
 };
 
 /* =========================
-   PROJECT ACTIONS (🔥 IA REAL)
+   PROJECT ACTIONS
 ========================= */
 export const getProjectActions = async (req, res) => {
   try {
@@ -173,13 +202,14 @@ export const getProjectActions = async (req, res) => {
     if (!latestRun || !latestRun.result) {
       return res.json({
         projectId: id,
-        actions: ["Run analysis first"]
+        actions: ["Run analysis first"],
+        refactors: [],
+        aiSuggestions: []
       });
     }
 
     const { hotspots = [] } = latestRun.result;
 
-    /* 🔥 ACTIONS */
     const actions = hotspots.map(h => ({
       priority: "HIGH",
       message: `Refactor ${h.file}`,
@@ -189,15 +219,14 @@ export const getProjectActions = async (req, res) => {
     if (actions.length === 0) {
       actions.push({
         priority: "LOW",
-        message: "Project is in good shape",
+        message: "Project is in good shape or no analyzable files were found",
         impact: "Maintain current practices"
       });
     }
+
     const refactors = generateRefactorSuggestions(hotspots);
 
-
     const aiSuggestions = await Promise.all(
-
       hotspots.slice(0, 3).map(async (h) => {
         try {
           const suggestion = await generateAISuggestion(h.file);
@@ -216,15 +245,19 @@ export const getProjectActions = async (req, res) => {
       })
     );
 
-    res.json({
+    return res.json({
       projectId: id,
       actions,
       refactors,
-      aiSuggestions // 🔥 NIVEL DIOS
+      aiSuggestions
     });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: error.message });
+    console.error("PROJECT ACTIONS ERROR:", error);
+
+    return res.status(500).json({
+      message: "Error getting project actions",
+      detail: error.message
+    });
   }
 };
