@@ -19,29 +19,61 @@ dotenv.config();
 
 const app = express();
 
-/* 🔥 CREAR SERVER HTTP */
+/* HTTP SERVER */
 const server = http.createServer(app);
 
-/* 🔥 SOCKET.IO */
+/* SOCKET.IO */
 const io = new Server(server, {
   cors: {
     origin: "*"
   }
 });
 
-/* 🔥 EXPORTAR IO */
+/* EXPORTAR SOCKET */
 export { io };
-
-console.log("JWT SECRET:", process.env.JWT_SECRET);
 
 /* MIDDLEWARES */
 app.use(cors());
 app.use(express.json());
 
-/* WEBHOOKS */
+/* =====================================================
+   HEALTH CHECKS
+===================================================== */
+
+app.get("/", (req, res) => {
+  res.status(200).json({
+    app: "DevVision AI",
+    status: "online",
+    version: "1.0.0",
+    environment: process.env.NODE_ENV || "development"
+  });
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "healthy",
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.get("/api/status", (req, res) => {
+  res.status(200).json({
+    api: "running",
+    database: "connected",
+    timestamp: new Date().toISOString()
+  });
+});
+
+/* =====================================================
+   WEBHOOKS
+===================================================== */
+
 app.use("/api/webhooks", githubWebhookRoutes);
 
-/* RUTAS */
+/* =====================================================
+   API ROUTES
+===================================================== */
+
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/organizations", organizationRoutes);
@@ -51,7 +83,10 @@ app.use("/api/analysis", analysisRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
-/* SOCKET CONNECTION */
+/* =====================================================
+   SOCKET CONNECTION
+===================================================== */
+
 io.on("connection", (socket) => {
   console.log("⚡ Cliente conectado:", socket.id);
 
@@ -65,12 +100,18 @@ io.on("connection", (socket) => {
   });
 });
 
-/* ERROR HANDLER */
+/* =====================================================
+   ERROR HANDLER
+===================================================== */
+
 app.use(errorHandler);
 
-/* START SERVER */
+/* =====================================================
+   START SERVER
+===================================================== */
+
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 DevVision AI running on port ${PORT}`);
 });
