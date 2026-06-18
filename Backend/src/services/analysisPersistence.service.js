@@ -1,38 +1,15 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "../config/prisma.js";
 
 export async function saveAnalysisResult({
-  organizationId,
   projectId,
-  language,
   result
 }) {
-  const analysis = await prisma.analysis.create({
+  const analysisRun = await prisma.analysisRun.create({
     data: {
-      organizationId,
       projectId,
-      language,
-      overallScore: result.overallScore,
-
-      dimensions: {
-        create: result.dimensions.map((dimension) => ({
-          key: dimension.key,
-          name: dimension.name,
-          score: dimension.score,
-
-          metrics: {
-            create: dimension.metrics.map((metric) => ({
-              key: metric.key,
-              name: metric.name,
-              value: metric.value,
-              score: metric.score
-            }))
-          }
-        }))
-      }
+      result
     }
   });
 
-  return analysis;
+  return analysisRun;
 }
