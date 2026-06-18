@@ -17,28 +17,10 @@ import errorHandler from "./middlewares/error.middleware.js";
 
 dotenv.config();
 
-/*
-====================================================
-VALIDACIÓN DE VARIABLES DE ENTORNO
-====================================================
-*/
-
-const requiredEnvVars = [
-  "DATABASE_URL",
-  "JWT_SECRET"
-];
-
-for (const envVar of requiredEnvVars) {
-  if (!process.env[envVar]) {
-    console.error(`❌ Missing environment variable: ${envVar}`);
-    process.exit(1);
-  }
-}
-
 const app = express();
-
 const server = http.createServer(app);
 
+/* SOCKET.IO */
 const io = new Server(server, {
   cors: {
     origin: "*"
@@ -47,21 +29,30 @@ const io = new Server(server, {
 
 export { io };
 
-/*
-====================================================
-MIDDLEWARES
-====================================================
-*/
+/* VALIDACIÓN DE VARIABLES DE ENTORNO */
+const requiredEnv = ["DATABASE_URL", "JWT_SECRET"];
 
-app.use(cors());
+for (const envVar of requiredEnv) {
+  if (!process.env[envVar]) {
+    console.error(`❌ Falta variable de entorno: ${envVar}`);
+    process.exit(1);
+  }
+}
+
+/* MIDDLEWARES */
+app.use(
+  cors({
+    origin: [
+      process.env.FRONTEND_URL,
+      "http://localhost:5173"
+    ],
+    credentials: true
+  })
+);
+
 app.use(express.json());
 
-/*
-====================================================
-HEALTH CHECKS
-====================================================
-*/
-
+/* HEALTH CHECKS */
 app.get("/", (req, res) => {
   res.json({
     app: "DevVision AI",
@@ -72,34 +63,24 @@ app.get("/", (req, res) => {
 });
 
 app.get("/health", (req, res) => {
-  res.status(200).json({
+  res.json({
     status: "healthy",
     timestamp: new Date().toISOString()
   });
 });
 
-app.get("/api/status", (req, res) => {
-  res.status(200).json({
-    api: "running",
-    database: "connected",
-    timestamp: new Date().toISOString()
+app.get("/healthz", (req, res) => {
+  res.json({
+    api: "en ejecución",
+    "base de datos": "conectada",
+    "marca de tiempo": new Date().toISOString()
   });
 });
 
-/*
-====================================================
-WEBHOOKS
-====================================================
-*/
-
+/* WEBHOOKS */
 app.use("/api/webhooks", githubWebhookRoutes);
 
-/*
-====================================================
-API ROUTES
-====================================================
-*/
-
+/* RUTAS */
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/organizations", organizationRoutes);
@@ -109,39 +90,24 @@ app.use("/api/analysis", analysisRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
-/*
-====================================================
-SOCKET.IO
-====================================================
-*/
-
+/* SOCKETS */
 io.on("connection", (socket) => {
-  console.log(`⚡ Client connected: ${socket.id}`);
+  console.log("⚡ Cliente conectado:", socket.id);
 
   socket.on("join_project", (projectId) => {
     socket.join(projectId);
-    console.log(`📡 Joined project: ${projectId}`);
+    console.log(`📡 Cliente unido al proyecto ${projectId}`);
   });
 
   socket.on("disconnect", () => {
-    console.log("❌ Client disconnected");
+    console.log("❌ Cliente desconectado");
   });
 });
 
-/*
-====================================================
-ERROR HANDLER
-====================================================
-*/
-
+/* ERROR HANDLER */
 app.use(errorHandler);
 
-/*
-====================================================
-START SERVER
-====================================================
-*/
-
+/* START SERVER */
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => {
