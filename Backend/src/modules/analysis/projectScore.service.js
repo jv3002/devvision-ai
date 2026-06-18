@@ -1,45 +1,48 @@
 export const calculateProjectScore = async (prisma, projectId) => {
-
-  const commits = await prisma.commit.findMany({
+  const analysisRuns = await prisma.analysisRun.findMany({
     where: { projectId },
-    orderBy: { date: "desc" },
-    take: 20 // últimos 20 commits
+    orderBy: { createdAt: "desc" },
+    take: 10
   });
 
-  if (commits.length === 0) {
+  if (analysisRuns.length === 0) {
     return {
       score: 0,
       trend: "no-data",
-      risk: "unknown"
+      risk: "unknown",
+      totalAnalyses: 0
     };
   }
 
-  // 📊 promedio
-  const avgScore = commits.reduce((acc, c) => acc + c.score, 0) / commits.length;
+  const latest = analysisRuns[0];
+  const previous = analysisRuns[1];
 
-  // 📉 tendencia (últimos 5 vs anteriores)
-  const recent = commits.slice(0, 5);
-  const older = commits.slice(5, 10);
-
-  const recentAvg = recent.reduce((acc, c) => acc + c.score, 0) / (recent.length || 1);
-  const olderAvg = older.reduce((acc, c) => acc + c.score, 0) / (older.length || 1);
+  const latestScore = latest.result?.overallScore ?? 0;
+  const previousScore = previous?.result?.overallScore ?? null;
 
   let trend = "stable";
 
-  if (recentAvg > olderAvg) trend = "improving";
-  if (recentAvg < olderAvg) trend = "declining";
+  if (previousScore !== null) {
+    if (latestScore > previousScore) trend = "improving";
+    if (latestScore < previousScore) trend = "declining";
+  }
 
-  // ⚠️ riesgo
   let risk = "low";
 
-  if (avgScore < 6) risk = "high";
-  else if (avgScore < 8) risk = "medium";
+  if (latestScore < 40) {
+    risk = "critical";
+  } else if (latestScore < 60) {
+    risk = "high";
+  } else if (latestScore < 80) {
+    risk = "medium";
+  }
 
   return {
-    score: Number(avgScore.toFixed(2)),
+    score: Number(latestScore.toFixed(2)),
     trend,
     risk,
-    totalCommits: commits.length
+    totalAnalyses: analysisRuns.length,
+    latestAnalysisId: latest.id,
+    latestAnalysisDate: latest.createdAt
   };
-
 };
