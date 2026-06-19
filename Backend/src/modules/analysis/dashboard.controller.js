@@ -137,7 +137,8 @@ export const getProjectDashboard = async (req, res) => {
     const recommendations = generateRecommendations({
       score,
       risk,
-      prediction
+      prediction,
+      hotspots
     });
 
     const executiveSummary = generateExecutiveSummary({
