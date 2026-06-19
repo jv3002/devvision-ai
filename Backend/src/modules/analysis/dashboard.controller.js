@@ -5,6 +5,77 @@ import { detectProjectRisk } from "./riskAnalysis.service.js";
 import { predictProjectFuture } from "./prediction.service.js";
 import { generateRecommendations } from "./recommendation.service.js";
 
+const generateExecutiveSummary = ({
+  score,
+  risk,
+  prediction,
+  hotspots,
+  analysisStatus
+}) => {
+  if (analysisStatus !== "COMPLETED") {
+    return {
+      healthStatus: "no-analysis",
+      mainMessage: "El proyecto aún no tiene un análisis técnico completo.",
+      priority: "run-analysis",
+      topAction: "Ejecutar análisis del repositorio."
+    };
+  }
+
+  const riskLevel = risk?.riskLevel || "unknown";
+  const trend = prediction?.trend || "stable";
+  const hotspotCount = hotspots?.length || 0;
+
+  let healthStatus = "healthy";
+  let priority = "maintain";
+  let mainMessage = "El proyecto se encuentra en buen estado técnico.";
+  let topAction = "Mantener buenas prácticas y monitorear próximos análisis.";
+
+  if (score < 40 || riskLevel === "critical") {
+    healthStatus = "critical";
+    priority = "urgent-refactor";
+    mainMessage = "El proyecto presenta riesgo técnico crítico.";
+    topAction = "Priorizar refactorización urgente de los módulos más problemáticos.";
+  } else if (score < 60 || riskLevel === "high") {
+    healthStatus = "at-risk";
+    priority = "reduce-risk";
+    mainMessage = "El proyecto tiene señales importantes de deuda técnica.";
+    topAction = "Reducir complejidad y revisar los hotspots principales.";
+  } else if (score < 80 || riskLevel === "medium") {
+    healthStatus = "watch";
+    priority = "improve";
+    mainMessage = "El proyecto es funcional, pero tiene áreas técnicas que deben mejorar.";
+    topAction = "Mejorar arquitectura, acoplamiento y archivos con mayor complejidad.";
+  }
+
+  if (trend === "up" && healthStatus === "healthy") {
+    mainMessage = "El proyecto está saludable y muestra una tendencia positiva.";
+  }
+
+  if (trend === "down") {
+    priority = "investigate-trend";
+    mainMessage = "El proyecto muestra una tendencia negativa que debe investigarse.";
+    topAction = "Comparar los últimos análisis y detectar qué métricas empeoraron.";
+  }
+
+  if (hotspotCount >= 10 && healthStatus !== "critical") {
+    healthStatus = "at-risk";
+    priority = "reduce-hotspots";
+    mainMessage = "El proyecto tiene demasiados hotspots técnicos.";
+    topAction = "Priorizar la refactorización de los archivos con mayor impacto.";
+  }
+
+  return {
+    healthStatus,
+    mainMessage,
+    priority,
+    topAction,
+    score,
+    riskLevel,
+    trend,
+    hotspotCount
+  };
+};
+
 /* =========================
    PROJECT DASHBOARD
 ========================= */
@@ -66,6 +137,14 @@ export const getProjectDashboard = async (req, res) => {
       prediction
     });
 
+    const executiveSummary = generateExecutiveSummary({
+      score,
+      risk,
+      prediction,
+      hotspots,
+      analysisStatus
+    });
+
     return res.json({
       project: {
         id: project.id,
@@ -83,6 +162,7 @@ export const getProjectDashboard = async (req, res) => {
             message: analysisMessage
           }
         : null,
+      executiveSummary,
       score,
       dimensions,
       hotspots,
