@@ -4,6 +4,7 @@ import { getDeveloperRanking } from "./developerInsights.service.js";
 import { detectProjectRisk } from "./riskAnalysis.service.js";
 import { predictProjectFuture } from "./prediction.service.js";
 import { generateRecommendations } from "./recommendation.service.js";
+import { generateHistoricalAnalytics } from "./analytics.service.js";
 
 const generateExecutiveSummary = ({
   score,
@@ -119,6 +120,8 @@ export const getProjectDashboard = async (req, res) => {
       status: run.result?.analysisStatus ?? "UNKNOWN"
     }));
 
+    const analytics = generateHistoricalAnalytics(history);
+
     const risk = await detectProjectRisk(prisma, projectId);
     const developers = await getDeveloperRanking(prisma, projectId);
 
@@ -163,6 +166,7 @@ export const getProjectDashboard = async (req, res) => {
           }
         : null,
       executiveSummary,
+      analytics,
       score,
       dimensions,
       hotspots,
