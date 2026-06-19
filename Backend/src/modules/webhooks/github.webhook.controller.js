@@ -1,21 +1,40 @@
 import prisma from "../../config/prisma.js";
-import { analyzeProject } from "../analysis/codeAnalyzer.service.js";
-import path from "path";
 import { calculateProjectScore } from "../analysis/projectScore.service.js";
-import fs from "fs";
+
+const normalizeRepoUrl = (url = "") => {
+  return url.trim().toLowerCase();
+};
+
+const calculateCommitScore = (message = "") => {
+  const lowerMessage = message.toLowerCase();
+
+  let score = 10;
+
+  if (lowerMessage.includes("fix")) score -= 1;
+  if (lowerMessage.includes("bug")) score -= 2;
+  if (lowerMessage.includes("hotfix")) score -= 2;
+  if (lowerMessage.includes("error")) score -= 1;
+  if (lowerMessage.includes("refactor")) score += 1;
+  if (lowerMessage.includes("test")) score += 1;
+  if (lowerMessage.includes("docs")) score += 0.5;
+
+  return Math.max(0, Math.min(10, score));
+};
 
 export const githubWebhook = async (req, res) => {
   try {
-
     const payload = req.body;
 
-    const repoUrl = payload.repository?.clone_url?.trim().toLowerCase();
+    const repoUrl = normalizeRepoUrl(
+      payload.repository?.clone_url || ""
+    );
 
     if (!repoUrl) {
-      return res.status(200).json({ message: "No repository in payload" });
+      return res.status(200).json({
+        message: "No repository in payload"
+      });
     }
 
-    // 🔍 buscar proyecto
     const project = await prisma.project.findFirst({
       where: {
         repoUrl: {
@@ -27,24 +46,35 @@ export const githubWebhook = async (req, res) => {
 
     if (!project) {
       return res.status(200).json({
-        message: "Project not registered"
+        message: "Project not registered",
+        repoUrl
       });
     }
 
-    // 🔥 PROCESAR COMMITS (CLAVE)
     const commits = payload.commits || [];
 
+    if (!commits.length) {
+      return res.status(200).json({
+        message: "Webhook received without commits",
+        projectId: project.id,
+        commitsProcessed: 0
+      });
+    }
+
+    let createdCommits = 0;
+
     for (const commit of commits) {
+      const message = commit.message || "No commit message";
+      const author =
+        commit.author?.name ||
+        commit.author?.username ||
+        "unknown";
 
-      const message = commit.message;
-      const author = commit.author?.name || "unknown";
-      const date = new Date(commit.timestamp);
+      const date = commit.timestamp
+        ? new Date(commit.timestamp)
+        : new Date();
 
-      let score = 10;
-
-      if (message.toLowerCase().includes("fix")) score -= 1;
-      if (message.toLowerCase().includes("bug")) score -= 2;
-      if (message.toLowerCase().includes("refactor")) score += 1;
+      const score = calculateCommitScore(message);
 
       await prisma.commit.create({
         data: {
@@ -56,68 +86,25 @@ export const githubWebhook = async (req, res) => {
         }
       });
 
+      createdCommits++;
     }
 
-    // 📂 construir ruta correctamente
-    const repoPath = project.repoPath
-      ? (path.isAbsolute(project.repoPath)
-          ? project.repoPath
-          : path.join(process.cwd(), project.repoPath))
-      : null;
-
-    // ⚠️ validar existencia (SIN romper flujo)
-    if (!repoPath || !fs.existsSync(repoPath)) {
-      console.log("⚠️ Repo no existe, saltando análisis:", repoPath);
-
-      const projectScore = await calculateProjectScore(prisma, project.id);
-
-      return res.json({
-        message: "Webhook processed (sin análisis de código)",
-        commitsProcessed: commits.length,
-        score: projectScore
-      });
-    }
-
-    // 🔍 análisis de código
-    const metrics = analyzeProject(repoPath);
-
-    // 🧹 limpiar métricas anteriores
-    await prisma.metric.deleteMany({
-      where: { projectId: project.id }
-    });
-
-    // 💾 guardar métricas
-    const savedMetrics = await Promise.all(
-      Object.entries(metrics).map(([name, value]) => {
-        return prisma.metric.create({
-          data: {
-            name,
-            value,
-            projectId: project.id
-          }
-        });
-      })
-    );
-
-    // 📊 calcular score
     const projectScore = await calculateProjectScore(prisma, project.id);
 
-    console.log("📊 PROJECT SCORE:", projectScore);
-
-    return res.json({
-      message: "Webhook processed",
-      commitsProcessed: commits.length,
-      metrics: savedMetrics,
+    return res.status(200).json({
+      message: "Webhook processed successfully",
+      projectId: project.id,
+      repoUrl,
+      commitsProcessed: createdCommits,
       score: projectScore
     });
 
   } catch (error) {
-
     console.error("🔥 WEBHOOK ERROR:", error);
 
     return res.status(500).json({
-      message: error.message
+      message: "Webhook processing failed",
+      detail: error.message
     });
-
   }
 };
