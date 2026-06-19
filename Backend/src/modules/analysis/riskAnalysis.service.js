@@ -1,33 +1,49 @@
 export const detectProjectRisk = async (prisma, projectId) => {
 
-  const commits = await prisma.commit.findMany({
-    where: { projectId },
-    orderBy: { date: "desc" },
-    take: 10
+  const latestAnalysis = await prisma.analysisRun.findFirst({
+    where: {
+      projectId
+    },
+    orderBy: {
+      createdAt: "desc"
+    }
   });
 
-  if (commits.length === 0) {
-    return { riskLevel: "unknown" };
+  if (!latestAnalysis || !latestAnalysis.result) {
+    return {
+      riskLevel: "unknown",
+      reason: "No analysis available"
+    };
   }
 
-  const avg = commits.reduce((acc, c) => acc + c.score, 0) / commits.length;
-
-  const bugCommits = commits.filter(c =>
-    c.message.toLowerCase().includes("fix") ||
-    c.message.toLowerCase().includes("bug")
-  ).length;
+  const score = latestAnalysis.result.overallScore || 0;
+  const hotspots = latestAnalysis.result.hotspots || [];
 
   let riskLevel = "low";
+  let reason = "Project looks healthy";
 
-  if (avg < 6 || bugCommits > 5) {
+  if (score < 40) {
+    riskLevel = "critical";
+    reason = "Very low quality score";
+  }
+  else if (score < 60) {
     riskLevel = "high";
-  } else if (avg < 8) {
+    reason = "Low quality score";
+  }
+  else if (score < 80) {
     riskLevel = "medium";
+    reason = "Average quality score";
+  }
+
+  if (hotspots.length >= 10) {
+    riskLevel = "high";
+    reason = "Too many hotspots detected";
   }
 
   return {
     riskLevel,
-    avgScore: Number(avg.toFixed(2)),
-    bugCommits
+    score,
+    hotspots: hotspots.length,
+    reason
   };
 };
