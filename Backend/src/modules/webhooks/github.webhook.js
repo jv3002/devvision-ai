@@ -1,75 +1,130 @@
 import prisma from "../../config/prisma.js";
-import { analyzeProject } from "../analysis/codeAnalyzer.service.js";
 import { io } from "../../server.js";
-import path from "path";
+import { calculateProjectScore } from "../analysis/projectScore.service.js";
+
+const normalizeRepoUrl = (url = "") => {
+  return url
+    .trim()
+    .toLowerCase()
+    .replace(/\.git$/, "");
+};
+
+const calculateCommitScore = (message = "") => {
+  const lowerMessage = message.toLowerCase();
+
+  let score = 10;
+
+  if (lowerMessage.includes("fix")) score -= 1;
+  if (lowerMessage.includes("bug")) score -= 2;
+  if (lowerMessage.includes("hotfix")) score -= 2;
+  if (lowerMessage.includes("error")) score -= 1;
+  if (lowerMessage.includes("refactor")) score += 1;
+  if (lowerMessage.includes("test")) score += 1;
+  if (lowerMessage.includes("docs")) score += 0.5;
+
+  return Math.max(0, Math.min(10, score));
+};
 
 export const githubWebhook = async (req, res) => {
-
   try {
-
     const payload = req.body;
 
-    if (!payload.repository) {
-      return res.status(200).json({ message: "No repository data" });
-    }
+    console.log("📦 WEBHOOK RECEIVED");
 
-    const repoUrl = payload.repository.clone_url;
+    const repoUrl = normalizeRepoUrl(
+      payload.repository?.clone_url || ""
+    );
 
-    const project = await prisma.project.findFirst({
-      where: {
-        repoUrl: repoUrl
-      }
-    });
+    console.log("📂 REPO FROM GITHUB:", repoUrl);
 
-    if (!project) {
+    if (!repoUrl) {
       return res.status(200).json({
-        message: "Project not registered"
+        message: "No repository in payload"
       });
     }
 
-    const repoPath = path.join(process.cwd(), project.repoPath);
-
-    const metrics = analyzeProject(repoPath);
-
-    const run = await prisma.analysisRun.create({
-      data: {
-        projectId: project.id
+    const project = await prisma.project.findFirst({
+      where: {
+        repoUrl: {
+          equals: repoUrl,
+          mode: "insensitive"
+        }
       }
     });
-    io.to(project.id).emit("project_updated", {
-      projectId: project.id,
-      message: "Proyecto actualizado en tiempo real"
-    });
 
-    await Promise.all(
-
-      Object.entries(metrics).map(([name, value]) => {
-
-        return prisma.metric.create({
-          data: {
-            name,
-            value,
-            projectId: project.id,
-            analysisId: run.id
-          }
-        });
-
-      })
-
+    console.log(
+      "📂 PROJECT FOUND:",
+      project?.name || "NONE"
     );
 
-    res.json({
-      message: "Webhook processed and analysis executed"
+    if (!project) {
+      return res.status(200).json({
+        message: "Project not registered",
+        repoUrl
+      });
+    }
+
+    const commits = payload.commits || [];
+
+    if (!commits.length) {
+      return res.status(200).json({
+        message: "Webhook received without commits",
+        projectId: project.id,
+        commitsProcessed: 0
+      });
+    }
+
+    let createdCommits = 0;
+
+    for (const commit of commits) {
+      const message = commit.message || "No commit message";
+
+      const author =
+        commit.author?.name ||
+        commit.author?.username ||
+        "unknown";
+
+      const date = commit.timestamp
+        ? new Date(commit.timestamp)
+        : new Date();
+
+      const score = calculateCommitScore(message);
+
+      await prisma.commit.create({
+        data: {
+          message,
+          author,
+          date,
+          score,
+          projectId: project.id
+        }
+      });
+
+      createdCommits++;
+    }
+
+    const projectScore = await calculateProjectScore(prisma, project.id);
+
+    io.to(project.id).emit("project_updated", {
+      projectId: project.id,
+      message: "Proyecto actualizado en tiempo real",
+      commitsProcessed: createdCommits
+    });
+
+    return res.status(200).json({
+      message: "Webhook processed successfully",
+      projectId: project.id,
+      repoUrl,
+      commitsProcessed: createdCommits,
+      score: projectScore
     });
 
   } catch (error) {
+    console.error("🔥 WEBHOOK ERROR:", error);
 
-    console.error(error);
-
-    res.status(500).json({
-      message: error.message
+    return res.status(500).json({
+      message: "Webhook processing failed",
+      detail: error.message
     });
-
   }
-
 };
