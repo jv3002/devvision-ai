@@ -11,6 +11,7 @@ import CommitsCard from "../components/CommitsCard";
 import ScoreChart from "../components/ScoreChart";
 import AlertsCard from "../components/AlertsCard";
 import StatusBadge from "../components/StatusBadge";
+import ComparisonCard from "../components/ComparisonCard";
 import socket from "../socket";
 
 export default function Dashboard() {
@@ -52,11 +53,15 @@ export default function Dashboard() {
       <ProjectSelector onSelect={setProjectId} />
 
       {!projectId && (
-        <p className="text-slate-400">Selecciona un proyecto para ver su auditoría técnica.</p>
+        <p className="text-slate-400">
+          Selecciona un proyecto para ver su auditoría técnica.
+        </p>
       )}
 
       {loading && (
-        <p className="text-blue-400">Cargando dashboard...</p>
+        <p className="text-blue-400">
+          Cargando dashboard...
+        </p>
       )}
 
       {data && (
@@ -65,6 +70,7 @@ export default function Dashboard() {
             <h1 className="text-3xl font-bold">
               🚀 {data.project.name}
             </h1>
+
             <p className="text-slate-400">
               {data.project.description}
             </p>
@@ -72,26 +78,44 @@ export default function Dashboard() {
 
           {data.executiveSummary && (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-              <h2 className="text-xl font-bold mb-2">Resumen Ejecutivo</h2>
-              <p className="text-lg">{data.executiveSummary.mainMessage}</p>
+              <h2 className="text-xl font-bold mb-2">
+                Resumen Ejecutivo
+              </h2>
+
+              <p className="text-lg">
+                {data.executiveSummary.mainMessage}
+              </p>
+
               <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <p className="text-slate-400">Estado</p>
-                  <p className="font-bold">{data.executiveSummary.healthStatus}</p>
+                  <p className="font-bold">
+                    {data.executiveSummary.healthStatus}
+                  </p>
                 </div>
+
                 <div>
                   <p className="text-slate-400">Riesgo</p>
-                  <p className="font-bold">{data.executiveSummary.riskLevel}</p>
+                  <p className="font-bold">
+                    {data.executiveSummary.riskLevel}
+                  </p>
                 </div>
+
                 <div>
                   <p className="text-slate-400">Tendencia</p>
-                  <p className="font-bold">{data.executiveSummary.trend}</p>
+                  <p className="font-bold">
+                    {data.executiveSummary.trend}
+                  </p>
                 </div>
+
                 <div>
                   <p className="text-slate-400">Hotspots</p>
-                  <p className="font-bold">{data.executiveSummary.hotspotCount}</p>
+                  <p className="font-bold">
+                    {data.executiveSummary.hotspotCount}
+                  </p>
                 </div>
               </div>
+
               <p className="mt-4 text-blue-300">
                 Acción principal: {data.executiveSummary.topAction}
               </p>
@@ -102,26 +126,42 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="bg-slate-900 p-4 rounded-xl">
                 <p className="text-slate-400">Análisis</p>
-                <p className="text-2xl font-bold">{data.analytics.totalAnalyses}</p>
+                <p className="text-2xl font-bold">
+                  {data.analytics.totalAnalyses}
+                </p>
               </div>
+
               <div className="bg-slate-900 p-4 rounded-xl">
                 <p className="text-slate-400">Último Score</p>
-                <p className="text-2xl font-bold">{data.analytics.latestScore}</p>
+                <p className="text-2xl font-bold">
+                  {data.analytics.latestScore}
+                </p>
               </div>
+
               <div className="bg-slate-900 p-4 rounded-xl">
                 <p className="text-slate-400">Mejor Score</p>
-                <p className="text-2xl font-bold">{data.analytics.bestScore}</p>
+                <p className="text-2xl font-bold">
+                  {data.analytics.bestScore}
+                </p>
               </div>
+
               <div className="bg-slate-900 p-4 rounded-xl">
                 <p className="text-slate-400">Peor Score</p>
-                <p className="text-2xl font-bold">{data.analytics.worstScore}</p>
+                <p className="text-2xl font-bold">
+                  {data.analytics.worstScore}
+                </p>
               </div>
+
               <div className="bg-slate-900 p-4 rounded-xl">
                 <p className="text-slate-400">Mejora</p>
-                <p className="text-2xl font-bold">{data.analytics.improvement}</p>
+                <p className="text-2xl font-bold">
+                  {data.analytics.improvement}
+                </p>
               </div>
             </div>
           )}
+
+          <ComparisonCard comparison={data.comparison} />
 
           <ScoreCard score={data.score} />
           <StatusBadge status={data.latestAnalysis?.status} />
