@@ -1,3 +1,4 @@
+import { generateComparison } from "./comparison.service.js";
 import { generateAlerts } from "./alert.service.js";
 import prisma from "../../config/prisma.js";
 import { getDeveloperRanking } from "./developerInsights.service.js";
@@ -77,9 +78,6 @@ const generateExecutiveSummary = ({
   };
 };
 
-/* =========================
-   PROJECT DASHBOARD
-========================= */
 export const getProjectDashboard = async (req, res) => {
   try {
     const { projectId } = req.params;
@@ -121,6 +119,7 @@ export const getProjectDashboard = async (req, res) => {
     }));
 
     const analytics = generateHistoricalAnalytics(history);
+    const comparison = generateComparison(history);
 
     const risk = await detectProjectRisk(prisma, projectId);
     const developers = await getDeveloperRanking(prisma, projectId);
@@ -168,6 +167,7 @@ export const getProjectDashboard = async (req, res) => {
         : null,
       executiveSummary,
       analytics,
+      comparison,
       score,
       dimensions,
       hotspots,
