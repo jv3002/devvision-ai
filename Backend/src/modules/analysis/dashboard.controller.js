@@ -1,4 +1,5 @@
 import { generateComparison } from "./comparison.service.js";
+import { generateDimensionTrends } from "./dimensionTrend.service.js";
 import { generateAlerts } from "./alert.service.js";
 import prisma from "../../config/prisma.js";
 import { getDeveloperRanking } from "./developerInsights.service.js";
@@ -120,6 +121,7 @@ export const getProjectDashboard = async (req, res) => {
 
     const analytics = generateHistoricalAnalytics(history);
     const comparison = generateComparison(history);
+    const dimensionTrends = generateDimensionTrends(historyRuns);
 
     const risk = await detectProjectRisk(prisma, projectId);
     const developers = await getDeveloperRanking(prisma, projectId);
@@ -168,6 +170,7 @@ export const getProjectDashboard = async (req, res) => {
       executiveSummary,
       analytics,
       comparison,
+      dimensionTrends,
       score,
       dimensions,
       hotspots,
