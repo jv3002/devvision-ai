@@ -13,6 +13,7 @@ import AlertsCard from "../components/AlertsCard";
 import StatusBadge from "../components/StatusBadge";
 import ComparisonCard from "../components/ComparisonCard";
 import DimensionTrendsCard from "../components/DimensionTrendsCard";
+import TechnicalDebtCard from "../components/TechnicalDebtCard";
 import socket from "../socket";
 
 export default function Dashboard() {
@@ -165,6 +166,8 @@ export default function Dashboard() {
           <ComparisonCard comparison={data.comparison} />
 
           <DimensionTrendsCard trends={data.dimensionTrends || []} />
+
+          <TechnicalDebtCard debt={data.technicalDebt} />
 
           <ScoreCard score={data.score} />
           <StatusBadge status={data.latestAnalysis?.status} />
