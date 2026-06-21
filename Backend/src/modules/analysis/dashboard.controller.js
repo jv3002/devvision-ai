@@ -1,5 +1,6 @@
 import { generateComparison } from "./comparison.service.js";
 import { generateDimensionTrends } from "./dimensionTrend.service.js";
+import { calculateTechnicalDebt } from "./technicalDebt.service.js";
 import { generateAlerts } from "./alert.service.js";
 import prisma from "../../config/prisma.js";
 import { getDeveloperRanking } from "./developerInsights.service.js";
@@ -124,6 +125,13 @@ export const getProjectDashboard = async (req, res) => {
     const dimensionTrends = generateDimensionTrends(historyRuns);
 
     const risk = await detectProjectRisk(prisma, projectId);
+
+    const technicalDebt = calculateTechnicalDebt({
+      score,
+      hotspots,
+      risk
+    });
+
     const developers = await getDeveloperRanking(prisma, projectId);
 
     const commits = await prisma.commit.findMany({
@@ -171,6 +179,7 @@ export const getProjectDashboard = async (req, res) => {
       analytics,
       comparison,
       dimensionTrends,
+      technicalDebt,
       score,
       dimensions,
       hotspots,
