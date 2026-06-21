@@ -1,3 +1,4 @@
+import { generatePriorityRefactors } from "./priorityRefactor.service.js";
 import { generateComparison } from "./comparison.service.js";
 import { generateDimensionTrends } from "./dimensionTrend.service.js";
 import { calculateTechnicalDebt } from "./technicalDebt.service.js";
@@ -131,6 +132,11 @@ export const getProjectDashboard = async (req, res) => {
       hotspots,
       risk
     });
+    
+    const priorityRefactors = generatePriorityRefactors({
+      technicalDebt,
+      hotspots
+    });
 
     const developers = await getDeveloperRanking(prisma, projectId);
 
@@ -180,6 +186,7 @@ export const getProjectDashboard = async (req, res) => {
       comparison,
       dimensionTrends,
       technicalDebt,
+      priorityRefactors,
       score,
       dimensions,
       hotspots,
