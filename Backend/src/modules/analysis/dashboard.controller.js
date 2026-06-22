@@ -1,3 +1,4 @@
+import { generateRefactorRoadmap } from "./refactorRoadmap.service.js";
 import { generateRefactorPlan } from "./refactorPlanner.service.js";
 import { generatePriorityRefactors } from "./priorityRefactor.service.js";
 import { generateComparison } from "./comparison.service.js";
@@ -143,6 +144,10 @@ export const getProjectDashboard = async (req, res) => {
       priorityRefactors
     });
 
+    const refactorRoadmap = generateRefactorRoadmap({
+      priorityRefactors
+    });
+
     const developers = await getDeveloperRanking(prisma, projectId);
 
     const commits = await prisma.commit.findMany({
@@ -193,6 +198,7 @@ export const getProjectDashboard = async (req, res) => {
       technicalDebt,
       priorityRefactors,
       refactorPlan,
+      refactorRoadmap,
       score,
       dimensions,
       hotspots,
