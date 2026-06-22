@@ -1,3 +1,4 @@
+import { generateRefactorPlan } from "./refactorPlanner.service.js";
 import { generatePriorityRefactors } from "./priorityRefactor.service.js";
 import { generateComparison } from "./comparison.service.js";
 import { generateDimensionTrends } from "./dimensionTrend.service.js";
@@ -132,10 +133,14 @@ export const getProjectDashboard = async (req, res) => {
       hotspots,
       risk
     });
-    
+
     const priorityRefactors = generatePriorityRefactors({
       technicalDebt,
       hotspots
+    });
+
+    const refactorPlan = generateRefactorPlan({
+      priorityRefactors
     });
 
     const developers = await getDeveloperRanking(prisma, projectId);
@@ -187,6 +192,7 @@ export const getProjectDashboard = async (req, res) => {
       dimensionTrends,
       technicalDebt,
       priorityRefactors,
+      refactorPlan,
       score,
       dimensions,
       hotspots,
