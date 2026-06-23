@@ -1,6 +1,8 @@
 import { generateRefactorRoadmap } from "./refactorRoadmap.service.js";
 import { generateRefactorPlan } from "./refactorPlanner.service.js";
 import { generatePriorityRefactors } from "./priorityRefactor.service.js";
+import { generateDeveloperScores } from "./developerScore.service.js";
+import { generateDeveloperTrends } from "./developerTrend.service.js";
 import { generateComparison } from "./comparison.service.js";
 import { generateDimensionTrends } from "./dimensionTrend.service.js";
 import { calculateTechnicalDebt } from "./technicalDebt.service.js";
@@ -156,6 +158,9 @@ export const getProjectDashboard = async (req, res) => {
       take: 10
     });
 
+    const developerScores = generateDeveloperScores(commits);
+    const developerTrends = generateDeveloperTrends(developerScores);
+
     const alerts = generateAlerts(score, risk);
     const prediction = predictProjectFuture(history);
 
@@ -204,6 +209,8 @@ export const getProjectDashboard = async (req, res) => {
       hotspots,
       risk,
       developers,
+      developerScores,
+      developerTrends,
       alerts,
       prediction,
       recommendations,
