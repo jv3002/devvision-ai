@@ -15,6 +15,7 @@ import ComparisonCard from "../components/comparisonCard";
 import DimensionTrendsCard from "../components/DimensionTrendCard";
 import TechnicalDebtCard from "../components/TechnicalDebtCard";
 import PriorityRefactorCard from "../components/PriorityRefactorCard";
+import RefactorRoadmapCard from "../components/RefactorRoadmapCard";
 import socket from "../socket";
 
 export default function Dashboard() {
@@ -171,6 +172,8 @@ export default function Dashboard() {
           <TechnicalDebtCard debt={data.technicalDebt} />
 
           <PriorityRefactorCard refactors={data.priorityRefactors || []} />
+
+          <RefactorRoadmapCard roadmap={data.refactorRoadmap || []} />
 
           <ScoreCard score={data.score} />
           <StatusBadge status={data.latestAnalysis?.status} />
