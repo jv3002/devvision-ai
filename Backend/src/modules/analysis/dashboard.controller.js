@@ -1,3 +1,4 @@
+import { generateSmartAlerts } from "./smartAlerts.service.js";
 import { generateRefactorRoadmap } from "./refactorRoadmap.service.js";
 import { generateRefactorPlan } from "./refactorPlanner.service.js";
 import { generatePriorityRefactors } from "./priorityRefactor.service.js";
@@ -161,8 +162,16 @@ export const getProjectDashboard = async (req, res) => {
     const developerScores = generateDeveloperScores(commits);
     const developerTrends = generateDeveloperTrends(developerScores);
 
-    const alerts = generateAlerts(score, risk);
     const prediction = predictProjectFuture(history);
+    const alerts = generateAlerts(score, risk);
+
+    const smartAlerts = generateSmartAlerts({
+      history,
+      technicalDebt,
+      risk,
+      prediction,
+      developerScores
+    });
 
     const recommendations = generateRecommendations({
       score,
@@ -212,6 +221,7 @@ export const getProjectDashboard = async (req, res) => {
       developerScores,
       developerTrends,
       alerts,
+      smartAlerts,
       prediction,
       recommendations,
       commits,
