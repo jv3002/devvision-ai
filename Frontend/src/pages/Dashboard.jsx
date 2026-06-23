@@ -7,9 +7,11 @@ import ScoreCard from "../components/ScoreCard";
 import PredictionCard from "../components/PredictionCard";
 import RecommendationsCard from "../components/RecommendationsCard";
 import DevelopersCard from "../components/DevelopersCard";
+import DeveloperScoreCard from "../components/DeveloperScoreCard";
 import CommitsCard from "../components/CommitsCard";
 import ScoreChart from "../components/ScoreChart";
 import AlertsCard from "../components/AlertsCard";
+import SmartAlertsCard from "../components/SmartAlertsCard";
 import StatusBadge from "../components/StatusBadge";
 import ComparisonCard from "../components/comparisonCard";
 import DimensionTrendsCard from "../components/DimensionTrendCard";
@@ -178,9 +180,19 @@ export default function Dashboard() {
           <ScoreCard score={data.score} />
           <StatusBadge status={data.latestAnalysis?.status} />
           <AlertsCard alerts={data.alerts} />
+
+          <SmartAlertsCard
+            alerts={data.smartAlerts || []}
+          />
+
           <PredictionCard prediction={data.prediction} />
           <RecommendationsCard recs={data.recommendations} />
           <DevelopersCard devs={data.developers} />
+
+          <DeveloperScoreCard
+            developers={data.developerScores || []}
+          />
+
           <CommitsCard commits={data.commits} />
           <ScoreChart history={data.history || []} />
         </>
