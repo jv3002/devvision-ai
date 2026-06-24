@@ -1,3 +1,6 @@
+import { generateTeamAnalytics } from "./teamAnalytics.service.js";
+import { generateEngineeringMaturity } from "./engineeringMaturity.service.js";
+import { generateEngineeringKpis } from "./engineeringKpi.service.js";
 import { generateQualityGate } from "./qualityGate.service.js";
 import { generateBusinessImpact } from "./businessImpact.service.js";
 import { generateReleaseReadiness } from "./releaseReadiness.service.js";
@@ -166,6 +169,12 @@ export const getProjectDashboard = async (req, res) => {
     const developerScores = generateDeveloperScores(commits);
     const developerTrends = generateDeveloperTrends(developerScores);
 
+    const teamAnalytics = generateTeamAnalytics({
+      developers,
+      developerScores,
+      commits
+    });
+
     const prediction = predictProjectFuture(history);
 
     const sprintHealth = generateSprintHealth({
@@ -205,6 +214,24 @@ export const getProjectDashboard = async (req, res) => {
       technicalDebt,
       prediction,
       releaseReadiness
+    });
+
+    const engineeringKpis = generateEngineeringKpis({
+      score,
+      technicalDebt,
+      sprintHealth,
+      qualityGate,
+      releaseReadiness,
+      smartAlerts,
+      developerScores
+    });
+
+    const engineeringMaturity = generateEngineeringMaturity({
+      engineeringKpis,
+      qualityGate,
+      releaseReadiness,
+      technicalDebt,
+      smartAlerts
     });
 
     const recommendations = generateRecommendations({
@@ -254,12 +281,15 @@ export const getProjectDashboard = async (req, res) => {
       developers,
       developerScores,
       developerTrends,
+      teamAnalytics,
       sprintHealth,
       alerts,
       smartAlerts,
       businessImpact,
       releaseReadiness,
       qualityGate,
+      engineeringKpis,
+      engineeringMaturity,
       prediction,
       recommendations,
       commits,
