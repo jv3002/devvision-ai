@@ -13,11 +13,16 @@ import ScoreChart from "../components/ScoreChart";
 import AlertsCard from "../components/AlertsCard";
 import SmartAlertsCard from "../components/SmartAlertsCard";
 import StatusBadge from "../components/StatusBadge";
+
 import ComparisonCard from "../components/comparisonCard";
 import DimensionTrendsCard from "../components/DimensionTrendCard";
 import TechnicalDebtCard from "../components/TechnicalDebtCard";
 import PriorityRefactorCard from "../components/PriorityRefactorCard";
 import RefactorRoadmapCard from "../components/RefactorRoadmapCard";
+
+import SprintHealthCard from "../components/SprintHealthCard";
+import BusinessImpactCard from "../components/BusinessImpactCard";
+
 import socket from "../socket";
 
 export default function Dashboard() {
@@ -28,7 +33,9 @@ export default function Dashboard() {
   const loadDashboard = async (id) => {
     try {
       setLoading(true);
+
       const response = await getDashboard(id);
+
       setData(response);
     } catch (error) {
       console.error("Error loading dashboard:", error);
@@ -169,32 +176,65 @@ export default function Dashboard() {
 
           <ComparisonCard comparison={data.comparison} />
 
-          <DimensionTrendsCard trends={data.dimensionTrends || []} />
+          <DimensionTrendsCard
+            trends={data.dimensionTrends || []}
+          />
 
-          <TechnicalDebtCard debt={data.technicalDebt} />
+          <TechnicalDebtCard
+            debt={data.technicalDebt}
+          />
 
-          <PriorityRefactorCard refactors={data.priorityRefactors || []} />
+          <BusinessImpactCard
+            impact={data.businessImpact}
+          />
 
-          <RefactorRoadmapCard roadmap={data.refactorRoadmap || []} />
+          <PriorityRefactorCard
+            refactors={data.priorityRefactors || []}
+          />
+
+          <RefactorRoadmapCard
+            roadmap={data.refactorRoadmap || []}
+          />
+
+          <SprintHealthCard
+            sprintHealth={data.sprintHealth}
+          />
 
           <ScoreCard score={data.score} />
-          <StatusBadge status={data.latestAnalysis?.status} />
+
+          <StatusBadge
+            status={data.latestAnalysis?.status}
+          />
+
           <AlertsCard alerts={data.alerts} />
 
           <SmartAlertsCard
             alerts={data.smartAlerts || []}
           />
 
-          <PredictionCard prediction={data.prediction} />
-          <RecommendationsCard recs={data.recommendations} />
-          <DevelopersCard devs={data.developers} />
+          <PredictionCard
+            prediction={data.prediction}
+          />
+
+          <RecommendationsCard
+            recs={data.recommendations}
+          />
+
+          <DevelopersCard
+            devs={data.developers}
+          />
 
           <DeveloperScoreCard
             developers={data.developerScores || []}
           />
 
-          <CommitsCard commits={data.commits} />
-          <ScoreChart history={data.history || []} />
+          <CommitsCard
+            commits={data.commits}
+          />
+
+          <ScoreChart
+            history={data.history || []}
+          />
         </>
       )}
     </div>
