@@ -22,6 +22,8 @@ import RefactorRoadmapCard from "../components/RefactorRoadmapCard";
 
 import SprintHealthCard from "../components/SprintHealthCard";
 import BusinessImpactCard from "../components/BusinessImpactCard";
+import ReleaseReadinessCard from "../components/ReleaseReadinessCard";
+import QualityGateCard from "../components/QualityGateCard";
 
 import socket from "../socket";
 
@@ -186,6 +188,13 @@ export default function Dashboard() {
 
           <BusinessImpactCard
             impact={data.businessImpact}
+          />
+
+          <ReleaseReadinessCard
+            readiness={data.releaseReadiness}
+          />
+          <QualityGateCard
+            gate={data.qualityGate}
           />
 
           <PriorityRefactorCard
