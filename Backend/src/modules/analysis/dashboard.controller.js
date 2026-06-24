@@ -1,3 +1,4 @@
+import { generateBusinessImpact } from "./businessImpact.service.js";
 import { generateReleaseReadiness } from "./releaseReadiness.service.js";
 import { generateSprintHealth } from "./sprintHealth.service.js";
 import { generateSmartAlerts } from "./smartAlerts.service.js";
@@ -182,6 +183,10 @@ export const getProjectDashboard = async (req, res) => {
       prediction,
       developerScores
     });
+    const businessImpact = generateBusinessImpact({
+      technicalDebt,
+      hotspots
+    });
 
     const releaseReadiness = generateReleaseReadiness({
       score,
@@ -242,6 +247,7 @@ export const getProjectDashboard = async (req, res) => {
       sprintHealth,
       alerts,
       smartAlerts,
+      businessImpact,
       releaseReadiness,
       prediction,
       recommendations,
