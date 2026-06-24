@@ -1,3 +1,4 @@
+import { generateReleaseReadiness } from "./releaseReadiness.service.js";
 import { generateSprintHealth } from "./sprintHealth.service.js";
 import { generateSmartAlerts } from "./smartAlerts.service.js";
 import { generateRefactorRoadmap } from "./refactorRoadmap.service.js";
@@ -182,6 +183,15 @@ export const getProjectDashboard = async (req, res) => {
       developerScores
     });
 
+    const releaseReadiness = generateReleaseReadiness({
+      score,
+      risk,
+      technicalDebt,
+      smartAlerts,
+      hotspots,
+      prediction
+    });
+
     const recommendations = generateRecommendations({
       score,
       risk,
@@ -232,6 +242,7 @@ export const getProjectDashboard = async (req, res) => {
       sprintHealth,
       alerts,
       smartAlerts,
+      releaseReadiness,
       prediction,
       recommendations,
       commits,
