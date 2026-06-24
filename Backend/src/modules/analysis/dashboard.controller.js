@@ -1,3 +1,4 @@
+import { generateQualityGate } from "./qualityGate.service.js";
 import { generateBusinessImpact } from "./businessImpact.service.js";
 import { generateReleaseReadiness } from "./releaseReadiness.service.js";
 import { generateSprintHealth } from "./sprintHealth.service.js";
@@ -183,6 +184,7 @@ export const getProjectDashboard = async (req, res) => {
       prediction,
       developerScores
     });
+
     const businessImpact = generateBusinessImpact({
       technicalDebt,
       hotspots
@@ -195,6 +197,14 @@ export const getProjectDashboard = async (req, res) => {
       smartAlerts,
       hotspots,
       prediction
+    });
+
+    const qualityGate = generateQualityGate({
+      score,
+      risk,
+      technicalDebt,
+      prediction,
+      releaseReadiness
     });
 
     const recommendations = generateRecommendations({
@@ -249,6 +259,7 @@ export const getProjectDashboard = async (req, res) => {
       smartAlerts,
       businessImpact,
       releaseReadiness,
+      qualityGate,
       prediction,
       recommendations,
       commits,
