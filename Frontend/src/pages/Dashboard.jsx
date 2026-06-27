@@ -4,6 +4,7 @@ import { getDashboard } from "../api/dashboard.api";
 import ProjectSelector from "../components/ProjectSelector";
 
 import AdvisorCard from "../components/AdvisorCard";
+import RoadmapPlannerCard from "../components/RoadmapPlannerCard";
 import ScoreCard from "../components/ScoreCard";
 import PredictionCard from "../components/PredictionCard";
 import RecommendationsCard from "../components/RecommendationsCard";
@@ -93,6 +94,10 @@ export default function Dashboard() {
           </div>
 
           <AdvisorCard advisor={data.advisor} />
+
+          <RoadmapPlannerCard
+            planner={data.roadmapPlanner}
+          />
 
           {data.executiveSummary && (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
