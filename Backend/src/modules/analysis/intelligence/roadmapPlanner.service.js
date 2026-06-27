@@ -1,4 +1,5 @@
 export const generateRoadmapPlanner = ({
+  score = 0,
   priorityRefactors = [],
   advisor,
   qualityGate,
@@ -14,7 +15,7 @@ export const generateRoadmapPlanner = ({
       file: item.file,
       action: item.action,
       impact: item.impact,
-      estimatedGain: item.estimatedScoreGain
+      estimatedGain: item.estimatedScoreGain || 0
     }));
 
   const sprint2 = priorityRefactors
@@ -23,7 +24,7 @@ export const generateRoadmapPlanner = ({
       file: item.file,
       action: item.action,
       impact: item.impact,
-      estimatedGain: item.estimatedScoreGain
+      estimatedGain: item.estimatedScoreGain || 0
     }));
 
   const sprint3 = priorityRefactors
@@ -32,7 +33,7 @@ export const generateRoadmapPlanner = ({
       file: item.file,
       action: item.action,
       impact: item.impact,
-      estimatedGain: item.estimatedScoreGain
+      estimatedGain: item.estimatedScoreGain || 0
     }));
 
   roadmap.push({
@@ -65,6 +66,11 @@ export const generateRoadmapPlanner = ({
     tasks: sprint3
   });
 
+  const totalEstimatedGain = roadmap.reduce(
+    (sum, sprint) => sum + sprint.estimatedGain,
+    0
+  );
+
   return {
     currentPhase:
       qualityGate?.passed === false
@@ -77,13 +83,7 @@ export const generateRoadmapPlanner = ({
 
     expectedScore: Math.min(
       100,
-      Math.round(
-        (advisor?.score || 0) +
-          roadmap.reduce(
-            (sum, sprint) => sum + sprint.estimatedGain,
-            0
-          )
-      )
+      Math.round(score + totalEstimatedGain)
     ),
 
     releaseForecast:

@@ -1,3 +1,4 @@
+import { generateArchitectureAdvisor } from "./intelligence/architectureAdvisor.service.js";
 import { generateRoadmapPlanner } from "./intelligence/roadmapPlanner.service.js";
 import { generateAdvisor } from "./intelligence/advisor.service.js";
 import { generateTeamAnalytics } from "./teamAnalytics.service.js";
@@ -268,12 +269,20 @@ export const getProjectDashboard = async (req, res) => {
     });
 
     const roadmapPlanner = generateRoadmapPlanner({
+      score,
       priorityRefactors,
       advisor,
       qualityGate,
       releaseReadiness,
       businessImpact,
       sprintHealth
+    });
+
+    const architectureAdvisor = generateArchitectureAdvisor({
+      hotspots,
+      dimensions,
+      technicalDebt,
+      qualityGate
     });
 
     return res.json({
@@ -296,6 +305,7 @@ export const getProjectDashboard = async (req, res) => {
       executiveSummary,
       advisor,
       roadmapPlanner,
+      architectureAdvisor,
       analytics,
       comparison,
       dimensionTrends,
