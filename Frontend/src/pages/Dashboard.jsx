@@ -3,6 +3,7 @@ import { getDashboard } from "../api/dashboard.api";
 
 import ProjectSelector from "../components/ProjectSelector";
 
+import AdvisorCard from "../components/AdvisorCard";
 import ScoreCard from "../components/ScoreCard";
 import PredictionCard from "../components/PredictionCard";
 import RecommendationsCard from "../components/RecommendationsCard";
@@ -90,6 +91,8 @@ export default function Dashboard() {
               {data.project.description}
             </p>
           </div>
+
+          <AdvisorCard advisor={data.advisor} />
 
           {data.executiveSummary && (
             <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
@@ -193,6 +196,7 @@ export default function Dashboard() {
           <ReleaseReadinessCard
             readiness={data.releaseReadiness}
           />
+
           <QualityGateCard
             gate={data.qualityGate}
           />
