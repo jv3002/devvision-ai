@@ -1,3 +1,4 @@
+import { generateRoadmapPlanner } from "./intelligence/roadmapPlanner.service.js";
 import { generateAdvisor } from "./intelligence/advisor.service.js";
 import { generateTeamAnalytics } from "./teamAnalytics.service.js";
 import { generateEngineeringMaturity } from "./engineeringMaturity.service.js";
@@ -266,6 +267,15 @@ export const getProjectDashboard = async (req, res) => {
       prediction
     });
 
+    const roadmapPlanner = generateRoadmapPlanner({
+      priorityRefactors,
+      advisor,
+      qualityGate,
+      releaseReadiness,
+      businessImpact,
+      sprintHealth
+    });
+
     return res.json({
       project: {
         id: project.id,
@@ -285,6 +295,7 @@ export const getProjectDashboard = async (req, res) => {
         : null,
       executiveSummary,
       advisor,
+      roadmapPlanner,
       analytics,
       comparison,
       dimensionTrends,
