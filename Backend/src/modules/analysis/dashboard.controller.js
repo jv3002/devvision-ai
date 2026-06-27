@@ -1,3 +1,4 @@
+import { generateAdvisor } from "./intelligence/advisor.service.js";
 import { generateTeamAnalytics } from "./teamAnalytics.service.js";
 import { generateEngineeringMaturity } from "./engineeringMaturity.service.js";
 import { generateEngineeringKpis } from "./engineeringKpi.service.js";
@@ -249,6 +250,22 @@ export const getProjectDashboard = async (req, res) => {
       analysisStatus
     });
 
+    const advisor = generateAdvisor({
+      score,
+      risk,
+      technicalDebt,
+      qualityGate,
+      releaseReadiness,
+      businessImpact,
+      engineeringKpis,
+      engineeringMaturity,
+      teamAnalytics,
+      sprintHealth,
+      smartAlerts,
+      hotspots,
+      prediction
+    });
+
     return res.json({
       project: {
         id: project.id,
@@ -267,6 +284,7 @@ export const getProjectDashboard = async (req, res) => {
           }
         : null,
       executiveSummary,
+      advisor,
       analytics,
       comparison,
       dimensionTrends,
