@@ -1,3 +1,5 @@
+import { generateDecisionEngine } from "./intelligence/decisionEngine.service.js";
+import { generateIntelligenceEngine } from "./intelligence/intelligenceEngine.service.js";
 import { generateArchitectureAdvisor } from "./intelligence/architectureAdvisor.service.js";
 import { generateRoadmapPlanner } from "./intelligence/roadmapPlanner.service.js";
 import { generateAdvisor } from "./intelligence/advisor.service.js";
@@ -285,6 +287,30 @@ export const getProjectDashboard = async (req, res) => {
       qualityGate
     });
 
+    const intelligenceEngine = generateIntelligenceEngine({
+      advisor,
+      roadmapPlanner,
+      architectureAdvisor,
+      technicalDebt,
+      qualityGate,
+      releaseReadiness,
+      businessImpact,
+      engineeringMaturity,
+      prediction
+    });
+
+    const decisionEngine = generateDecisionEngine({
+      advisor,
+      roadmapPlanner,
+      architectureAdvisor,
+      technicalDebt,
+      qualityGate,
+      releaseReadiness,
+      businessImpact,
+      priorityRefactors,
+      smartAlerts
+    });
+
     return res.json({
       project: {
         id: project.id,
@@ -303,6 +329,8 @@ export const getProjectDashboard = async (req, res) => {
           }
         : null,
       executiveSummary,
+      intelligenceEngine,
+      decisionEngine,
       advisor,
       roadmapPlanner,
       architectureAdvisor,
