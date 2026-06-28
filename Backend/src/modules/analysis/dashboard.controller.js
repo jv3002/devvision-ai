@@ -1,3 +1,4 @@
+import { generateExecutiveAI } from "./intelligence/executiveAI.service.js";
 import { generateDecisionEngine } from "./intelligence/decisionEngine.service.js";
 import { generateIntelligenceEngine } from "./intelligence/intelligenceEngine.service.js";
 import { generateArchitectureAdvisor } from "./intelligence/architectureAdvisor.service.js";
@@ -311,6 +312,19 @@ export const getProjectDashboard = async (req, res) => {
       smartAlerts
     });
 
+    const executiveAI = generateExecutiveAI({
+      advisor,
+      decisionEngine,
+      roadmapPlanner,
+      architectureAdvisor,
+      engineeringMaturity,
+      engineeringKpis,
+      releaseReadiness,
+      technicalDebt,
+      prediction,
+      businessImpact
+    });
+
     return res.json({
       project: {
         id: project.id,
@@ -331,6 +345,7 @@ export const getProjectDashboard = async (req, res) => {
       executiveSummary,
       intelligenceEngine,
       decisionEngine,
+      executiveAI,
       advisor,
       roadmapPlanner,
       architectureAdvisor,
