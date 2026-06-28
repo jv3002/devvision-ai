@@ -1,3 +1,4 @@
+import { generateStrategyEngine } from "./intelligence/strategyEngine.service.js";
 import { generateExecutiveAI } from "./intelligence/executiveAI.service.js";
 import { generateDecisionEngine } from "./intelligence/decisionEngine.service.js";
 import { generateIntelligenceEngine } from "./intelligence/intelligenceEngine.service.js";
@@ -325,6 +326,20 @@ export const getProjectDashboard = async (req, res) => {
       businessImpact
     });
 
+    const strategyEngine = generateStrategyEngine({
+      score,
+      executiveAI,
+      decisionEngine,
+      intelligenceEngine,
+      roadmapPlanner,
+      architectureAdvisor,
+      engineeringMaturity,
+      engineeringKpis,
+      releaseReadiness,
+      technicalDebt,
+      businessImpact
+    });
+
     return res.json({
       project: {
         id: project.id,
@@ -346,6 +361,7 @@ export const getProjectDashboard = async (req, res) => {
       intelligenceEngine,
       decisionEngine,
       executiveAI,
+      strategyEngine,
       advisor,
       roadmapPlanner,
       architectureAdvisor,
