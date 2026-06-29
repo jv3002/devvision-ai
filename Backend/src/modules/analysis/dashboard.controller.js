@@ -1,3 +1,4 @@
+import { generateCTOEngine } from "./intelligence/ctoEngine.service.js";
 import { generateOpportunityEngine } from "./intelligence/opportunityEngine.service.js";
 import { generateStrategyEngine } from "./intelligence/strategyEngine.service.js";
 import { generateExecutiveAI } from "./intelligence/executiveAI.service.js";
@@ -349,6 +350,16 @@ export const getProjectDashboard = async (req, res) => {
       roadmapPlanner
     });
 
+    const ctoEngine = generateCTOEngine({
+      strategyEngine,
+      engineeringMaturity,
+      technicalDebt,
+      releaseReadiness,
+      roadmapPlanner,
+      businessImpact,
+      teamAnalytics
+    });
+
     return res.json({
       project: {
         id: project.id,
@@ -372,6 +383,7 @@ export const getProjectDashboard = async (req, res) => {
       executiveAI,
       strategyEngine,
       opportunityEngine,
+      ctoEngine,
       advisor,
       roadmapPlanner,
       architectureAdvisor,
