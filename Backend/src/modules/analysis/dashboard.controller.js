@@ -1,3 +1,4 @@
+import { generateCEOEngine } from "./intelligence/ceoEngine.service.js";
 import { generateCTOEngine } from "./intelligence/ctoEngine.service.js";
 import { generateOpportunityEngine } from "./intelligence/opportunityEngine.service.js";
 import { generateStrategyEngine } from "./intelligence/strategyEngine.service.js";
@@ -360,6 +361,17 @@ export const getProjectDashboard = async (req, res) => {
       teamAnalytics
     });
 
+    const ceoEngine = generateCEOEngine({
+      ctoEngine,
+      strategyEngine,
+      businessImpact,
+      roadmapPlanner,
+      releaseReadiness,
+      engineeringMaturity,
+      technicalDebt,
+      prediction
+    });
+
     return res.json({
       project: {
         id: project.id,
@@ -384,6 +396,7 @@ export const getProjectDashboard = async (req, res) => {
       strategyEngine,
       opportunityEngine,
       ctoEngine,
+      ceoEngine,
       advisor,
       roadmapPlanner,
       architectureAdvisor,
@@ -415,7 +428,6 @@ export const getProjectDashboard = async (req, res) => {
       commits,
       history
     });
-
   } catch (error) {
     console.error("🔥 DASHBOARD ERROR:", error);
 
